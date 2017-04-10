@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
+#include <stdio.h>
+#include <iostream>
 #include "utils.h"
 
 

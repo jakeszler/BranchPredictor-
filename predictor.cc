@@ -3,7 +3,7 @@
 
 PREDICTOR::PREDICTOR (void)
 {
-    numbranches = 0;
+  numbranches = 0;
   bp.init_bp();
   banks.bank_init();
 
@@ -13,7 +13,7 @@ PREDICTOR::PREDICTOR (void)
 bool PREDICTOR::GetPrediction (UINT64 PC)
 {
  numbranches++;
-
+ 
  bool foundPred = false;
  altpredno = predno = 0;
  int index = bp.bp_getIndex(PC);
@@ -22,7 +22,6 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
  for (int i = 0; i < NUMBANKS; i++){
     int entry = get_bank_index(PC, i, ghr.get_ghr());
     int tag = get_tag(PC, ghr.get_ghr(), i);
-
     if (banks.tag_match(i, entry, tag)){
       if (foundPred){
         altpred = pred;
@@ -33,7 +32,7 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
       foundPred = true;
     }
  }
- return pred; 
+  return pred; 
 
 }
 
@@ -138,6 +137,7 @@ uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
       else{
         index ^= tempGHR & ((1 << numHistoryBits) - 1);
         tempGHR >>= numHistoryBits;
+        numHistoryBits -= numHistoryBits;
       }
   }
   return (index % BANKSIZE);
