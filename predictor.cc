@@ -32,6 +32,7 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
       foundPred = true;
     }
  }
+
   return pred; 
 
 }
@@ -124,9 +125,9 @@ void PREDICTOR::TrackOtherInst (UINT64 PC, OpType opType, bool taken, UINT64 bra
 uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
   int numHistoryBits = (int) (pow(13.0/8.0, bankno) * 10.0 + .5);
   __uint128_t tempGHR = ghr;
-  uint16_t index = tempGHR & ((1 << BANKINDEXBITS) - 1); 
-  tempGHR >>= BANKINDEXBITS;
-  numHistoryBits -= BANKINDEXBITS;
+  uint16_t index = PC & ((1 << BANKINDEXBITS) - 1); 
+ // tempGHR >>= BANKINDEXBITS;
+  //numHistoryBits -= BANKINDEXBITS;
 
   while (numHistoryBits > 0){
       if (numHistoryBits >= BANKINDEXBITS){
@@ -145,7 +146,7 @@ uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
 
 uint8_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
   int numHistoryBits = (int) (pow(13.0/8.0, bankno) * 10.0 + .5);
-  __uint128_t result = PC * (ghr & ((1 << numHistoryBits) - 1));
+  __uint128_t result = PC ^ (ghr & ((1 << numHistoryBits) - 1));
   return (result % 256);
 }
 
