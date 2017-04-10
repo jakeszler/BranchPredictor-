@@ -116,6 +116,7 @@ class PREDICTOR{
   bool pred, altpred;
   long numbranches; 
   int update_banks[NUMBANKS];
+  //int bank_used[NUMBANKS + 2];
 
  public:
 
@@ -133,6 +134,7 @@ class PREDICTOR{
   uint16_t get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr);
   uint8_t get_tag(UINT64 PC, __uint128_t ghr, int bankno);
   void init_update_banks();
+  void init_used_banks();
   // Contestants can define their own functions below
 };
 #endif
