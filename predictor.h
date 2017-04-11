@@ -25,7 +25,7 @@
 #define TAKEN 1
 #define NOTTAKEN 0
 #define GHRLENGTH 100
-#define NUMBANKS 4
+#define NUMBANKS 5
 
 
 //NOTE competitors are allowed to change anything in this file include the following two defines
@@ -82,6 +82,7 @@ class Banks{
   void bank_update(int bankno, int entry, bool resolveDir);
   void set_tag(int bankno, int entry, int tag);
   int get_u_ctr(int bank, int entry);
+  int get_tag(int bank, int entry);
 
 };
 
@@ -132,9 +133,10 @@ class PREDICTOR{
   void    TrackOtherInst(UINT64 PC, OpType opType, bool branchDir, UINT64 branchTarget);
 
   uint16_t get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr);
-  uint8_t get_tag(UINT64 PC, __uint128_t ghr, int bankno);
+  uint16_t get_tag(UINT64 PC, __uint128_t ghr, int bankno);
   void init_update_banks();
   void init_used_banks();
+  void print100(const char* str);
   // Contestants can define their own functions below
 };
 #endif

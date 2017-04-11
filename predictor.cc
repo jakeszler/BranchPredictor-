@@ -6,11 +6,7 @@ PREDICTOR::PREDICTOR (void)
   numbranches = 0;
   bp.init_bp();
   banks.bank_init();
-//  init_used_banks();
 }
-
-
-
 
 bool PREDICTOR::GetPrediction (UINT64 PC)
 {
@@ -21,8 +17,8 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
  pred = altpred = bp.bp_getPred(index);
 
  for (int i = 0; i < NUMBANKS; i++){
-    int entry = get_bank_index(PC, i, ghr.get_ghr());
-    int tag = get_tag(PC, ghr.get_ghr(), i);
+    uint16_t entry = get_bank_index(PC, i, ghr.get_ghr());
+    uint16_t tag = get_tag(PC, ghr.get_ghr(), i);
     if (banks.tag_match(i, entry, tag)){
       if (foundPred){
         altpred = pred;
@@ -33,9 +29,7 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
       foundPred = true;
     }
  } 
-
-
-  return pred; 
+return pred; 
 
 }
 
@@ -86,28 +80,26 @@ void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool
                     no_zeros = false;
                  }
             }
-
-            if (no_zeros){
+            if (no_zeros){ 
                 for (int i = predno; i < NUMBANKS; i++){
                     int bank_entry = get_bank_index(PC, i, ghr.get_ghr());
                     banks.decr_u_ctr(i, bank_entry);
                 }
             }
             else{
-                int rand_val = rand() % cuml_prob;
+                int rand_val = rand() % (cuml_prob + 1);
                 int running_total = 0;
                 int selected_bank = -1;
 
                 for (int i = 0; i < NUMBANKS; i++){
                     if (update_banks[i] != 0){
                         running_total += update_banks[i];
-                        if (rand_val < running_total){
+                        if (rand_val <= running_total){
                             selected_bank = i;
                             break;
                         }
                     }
                 }
-
                 //allocate
                 int allocate_entry = get_bank_index(PC, selected_bank, ghr.get_ghr());
                 int allocate_tag = get_tag(PC, ghr.get_ghr(), selected_bank);
@@ -126,10 +118,10 @@ void PREDICTOR::TrackOtherInst (UINT64 PC, OpType opType, bool taken, UINT64 bra
 }
 
 uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
-  int numHistoryBits = (int) (pow(13.0/8.0, bankno) * 10.0 + .5);
+  int numHistoryBits = (int) (pow(2.0, bankno) * 8.0 + .5);
   __uint128_t tempGHR = ghr;
   uint16_t index = PC & ((1 << BANKINDEXBITS) - 1); 
- // tempGHR >>= BANKINDEXBITS;
+  //tempGHR >>= BANKINDEXBITS;
   //numHistoryBits -= BANKINDEXBITS;
 
   while (numHistoryBits > 0){
@@ -147,26 +139,38 @@ uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
   return (index % BANKSIZE);
 }
 
-uint8_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
+uint16_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
   int numHistoryBits = (int) (pow(13.0/8.0, bankno) * 10.0 + .5);
   __uint128_t tempGHR = ghr;
-  uint16_t index = PC & ((1 << BANKINDEXBITS) - 1); 
+  //if (numbranches == 10)
+    //printf("%llu\n", ghr);
+  UINT64 index = PC & ((1 << BANKINDEXBITS) - 1);
+ // if (numbranches == 10)
+ //   printf("index: %d\n", index);
  // tempGHR >>= BANKINDEXBITS;
   //numHistoryBits -= BANKINDEXBITS;
 
   while (numHistoryBits > 0){
       if (numHistoryBits >= BANKINDEXBITS){
         index ^= tempGHR & ((1 << BANKINDEXBITS) - 1);
+    //    if (numbranches == 10)
+  //  printf("index: %d\n", index);
         tempGHR >>= BANKINDEXBITS;
         numHistoryBits -= BANKINDEXBITS;
+    //    if (numbranches == 1)
+   // printf("%d\n", index);
       }
       else{
         index ^= tempGHR & ((1 << numHistoryBits) - 1);
+     //   if (numbranches == 10)
+   // printf("index: %d\n", index);
         tempGHR >>= numHistoryBits;
         numHistoryBits -= numHistoryBits;
+   //     if (numbranches == 1)
+   // printf("%d\n", index);
       }
   }
-  index >>= BANKINDEXBITS;
+ // index >>= BANKINDEXBITS;
   return (index % 256);
 }
 
@@ -303,5 +307,9 @@ void Banks::clearLSBs(){
             bank_array[i][j].useful_ctr &=  2;
         }
     }
+}
+
+int Banks::get_tag(int bank, int entry){
+  return bank_array[bank][entry].tag;
 }
 
