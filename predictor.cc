@@ -6,10 +6,20 @@ PREDICTOR::PREDICTOR (void)
   numbranches = 0;
   bp.init_bp();
   banks.bank_init();
+  lp.init_lp();
 }
 
 bool PREDICTOR::GetPrediction (UINT64 PC)
 {
+  if (lp.get_prediction(PC) != -1){
+    usedlp = true;
+    if(lp.get_prediction(PC) == 1)
+      return TAKEN;
+    else 
+      return NOTTAKEN;
+  }
+  usedlp = false;
+
  numbranches++;
  bool foundPred = false;
  altpredno = predno = 0;
@@ -35,6 +45,10 @@ return pred;
 
 void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool predDir, UINT64 branchTarget)
 {
+    if (branchTarget < PC && usedlp){
+      lp.UpdatePredictor(PC, OPTYPE, resolveDir, predDir, branchTarget);
+    }
+
     if (numbranches % 512000 == 0){
         banks.clearLSBs();
     }
@@ -141,37 +155,28 @@ uint16_t PREDICTOR::get_bank_index(UINT64 PC, uint8_t bankno, __uint128_t ghr){
 
 uint16_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
   int numHistoryBits = (int) (pow(13.0/8.0, bankno) * 10.0 + .5);
-  __uint128_t tempGHR = ghr;
-  //if (numbranches == 10)
-    //printf("%llu\n", ghr);
-  UINT64 index = PC & ((1 << BANKINDEXBITS) - 1);
- // if (numbranches == 10)
- //   printf("index: %d\n", index);
- // tempGHR >>= BANKINDEXBITS;
-  //numHistoryBits -= BANKINDEXBITS;
+  __uint128_t masked_ghr = ghr & ((1 << numHistoryBits) - 1);
+
+
+  __uint128_t mapped = masked_ghr + PC *  2971215073;
+ // return mapped % (1 << TAGBITS);
+  int tag = mapped & ((1 << TAGBITS) - 1);
+  mapped >>= TAGBITS;
+  numHistoryBits -= TAGBITS;
 
   while (numHistoryBits > 0){
-      if (numHistoryBits >= BANKINDEXBITS){
-        index ^= tempGHR & ((1 << BANKINDEXBITS) - 1);
-    //    if (numbranches == 10)
-  //  printf("index: %d\n", index);
-        tempGHR >>= BANKINDEXBITS;
+      if (numHistoryBits >= TAGBITS){
+        tag ^= mapped & ((1 << TAGBITS) - 1);
+        mapped >>= BANKINDEXBITS;
         numHistoryBits -= BANKINDEXBITS;
-    //    if (numbranches == 1)
-   // printf("%d\n", index);
       }
       else{
-        index ^= tempGHR & ((1 << numHistoryBits) - 1);
-     //   if (numbranches == 10)
-   // printf("index: %d\n", index);
-        tempGHR >>= numHistoryBits;
+        tag ^= mapped & ((1 << numHistoryBits) - 1);
+        mapped >>= numHistoryBits;
         numHistoryBits -= numHistoryBits;
-   //     if (numbranches == 1)
-   // printf("%d\n", index);
       }
   }
- // index >>= BANKINDEXBITS;
-  return (index % 256);
+  return tag % (1 << TAGBITS); 
 }
 
 void PREDICTOR::init_update_banks(){
@@ -313,3 +318,85 @@ int Banks::get_tag(int bank, int entry){
   return bank_array[bank][entry].tag;
 }
 
+int LoopPredictor::get_prediction(UINT64 PC){
+  int index = get_index(PC);
+  int tag = get_tag(PC);
+
+  if (loop_table[index].tag != tag)
+    return -1;
+
+  if (loop_table[index].confidence == 3){
+    if (loop_table[index].iter_count == loop_table[index].loop_count)
+     return NOTTAKEN;
+    else
+    return TAKEN;
+  }
+  else
+    return -1;
+}
+
+void LoopPredictor::UpdatePredictor(UINT64 PC, OpType opType, bool resolveDir, bool predDir, UINT64 branchTarget){
+  int tag = get_tag(PC);
+  int index = get_index(PC);
+  if (loop_table[index].tag == tag){
+    if (resolveDir == TAKEN){
+      loop_table[index].iter_count++;
+      if (loop_table[index].iter_count > loop_table[index].loop_count &&
+          loop_table[index].confidence <= 1){
+        loop_table[index].loop_count++;
+      }
+    }
+    else {
+      loop_table[index].iter_count = 0;
+      if (loop_table[index].iter_count == loop_table[index].loop_count){
+        incr_confidence(index);
+        incr_age(index);
+      }
+      else{
+        decr_confidence(index);
+        decr_age(index);
+      }
+    }
+  }
+  else{
+    if(loop_table[index].age == 0){
+        loop_table[index].tag = tag;
+        loop_table[index].age = 255;
+        loop_table[index].iter_count = 0;
+        loop_table[index].loop_count = 0;
+    } 
+  }
+}
+
+uint16_t LoopPredictor::get_index(UINT64 PC){
+  return (PC & ((1 << LPINDEXBITS) - 1));
+}
+
+uint16_t LoopPredictor::get_tag(UINT64 PC){
+  return (PC >> LPINDEXBITS) & ((1 << LPTAGBITS) - 1);
+}
+
+void LoopPredictor::init_lp(){
+  for (int i = 0; i < LPSIZE; i++){
+    loop_table[i].iter_count = 0;
+    loop_table[i].loop_count = 0;
+    loop_table[i].confidence = 0;
+    loop_table[i].tag = 0;
+    loop_table[i].age = 255;
+  }
+}
+
+void LoopPredictor::incr_confidence(uint16_t index){
+  loop_table[index].confidence++;
+}
+void LoopPredictor::decr_confidence(uint16_t index){
+  loop_table[index].confidence--;
+}
+void LoopPredictor::incr_age(uint16_t index){
+  loop_table[index].age++;
+}
+void LoopPredictor::decr_age(uint16_t index){
+  loop_table[index].age--;
+}
+
+LoopPredictor::LoopPredictor(void){};

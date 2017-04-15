@@ -16,17 +16,25 @@
 
 
 #define BPSIZE 4096
+#define BPINDEXBITS 12
+
 #define BANKSIZE 1024
 #define BANKINDEXBITS 10
+#define NUMBANKS 5
+#define TAGBITS 8
+
 #define MAXSAT 7
 #define UMAX 3
 #define PREDMSB 4
-#define BPINDEXBITS 12
+
 #define TAKEN 1
 #define NOTTAKEN 0
-#define GHRLENGTH 100
-#define NUMBANKS 5
 
+#define LOOP
+
+#define LPSIZE 1024
+#define LPINDEXBITS 10
+#define LPTAGBITS 16
 
 //NOTE competitors are allowed to change anything in this file include the following two defines
 //ver2 #define FILTER_UPDATES_USING_BTB     0     //if 1 then the BTB updates are filtered for a given branch if its marker is not btbDYN
@@ -40,6 +48,14 @@ uint8_t pred_ctr;
 uint8_t tag;
 uint8_t useful_ctr;
 }bank_entry;
+
+typedef struct loop_entry{
+  uint16_t loop_count;
+  uint16_t iter_count;
+  uint16_t tag;
+  uint8_t confidence;
+  uint8_t age;
+};
 
 
 class BasePredictor{
@@ -101,6 +117,25 @@ class GHR{
 
 };
 
+class LoopPredictor{
+  private:
+    loop_entry loop_table[LPSIZE];
+
+  public:
+    LoopPredictor(void);
+
+    void init_lp();
+    int get_prediction(UINT64 PC);
+    uint16_t get_tag(UINT64 PC);
+    uint16_t get_index(UINT64 PC);
+    void incr_confidence(uint16_t index);
+    void decr_confidence(uint16_t index);
+    void incr_age(uint16_t index);
+    void decr_age(uint16_t index);
+    void UpdatePredictor(UINT64 PC, OpType opType, bool resolveDir, bool predDir, UINT64 branchTarget);
+
+};
+
 class PREDICTOR{
 
   // The state is defined for Gshare, change for your design
@@ -113,8 +148,10 @@ class PREDICTOR{
   GHR ghr;
   BasePredictor bp;
   Banks banks;
+  LoopPredictor lp;
   int predno, altpredno;
-  bool pred, altpred;
+  bool pred, altpred, usedlp;
+  uint16_t index;
   long numbranches; 
   int update_banks[NUMBANKS];
   //int bank_used[NUMBANKS + 2];
