@@ -35,6 +35,7 @@
 #define LPSIZE 1024
 #define LPINDEXBITS 10
 #define LPTAGBITS 16
+#define INITAGE 20
 
 //NOTE competitors are allowed to change anything in this file include the following two defines
 //ver2 #define FILTER_UPDATES_USING_BTB     0     //if 1 then the BTB updates are filtered for a given branch if its marker is not btbDYN
@@ -54,7 +55,7 @@ typedef struct loop_entry{
   uint16_t iter_count;
   uint16_t tag;
   uint8_t confidence;
-  uint8_t age;
+  uint16_t age;
 };
 
 
@@ -132,7 +133,7 @@ class LoopPredictor{
     void decr_confidence(uint16_t index);
     void incr_age(uint16_t index);
     void decr_age(uint16_t index);
-    void UpdatePredictor(UINT64 PC, OpType opType, bool resolveDir, bool predDir, UINT64 branchTarget);
+    void UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir);
 
 };
 
