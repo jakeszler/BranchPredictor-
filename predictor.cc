@@ -11,14 +11,10 @@ PREDICTOR::PREDICTOR (void)
 
 bool PREDICTOR::GetPrediction (UINT64 PC)
 {
- /* if (lp.get_prediction(PC) != -1){
-    usedlp = true;
-    //printf("used lp\n");
-    if(lp.get_prediction(PC) == 1)
-      return TAKEN;
-    else 
+  if (lp.get_prediction(PC) == 0){
+      usedlp = true;
       return NOTTAKEN;
-  }*/
+  }
   usedlp = false;
   //printf("not lp\n");
  numbranches++;
@@ -46,9 +42,14 @@ return pred;
 
 void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool predDir, UINT64 branchTarget)
 {
-   /* if (branchTarget < PC){
-      lp.UpdatePredictor(PC, resolveDir, predDir);
-    }*/
+    if (branchTarget < PC){
+      lp.UpdatePredictor(PC, resolveDir, predDir, usedlp);
+    }
+
+   /* if(usedlp && resolveDir != predDir)
+      printf("incorrect lp\n");
+    else if (usedlp)
+      printf("correct lp\n");*/
 
     if (numbranches % 512000 == 0){
         banks.clearLSBs();
@@ -323,24 +324,28 @@ int LoopPredictor::get_prediction(UINT64 PC){
   int index = get_index(PC);
   int tag = get_tag(PC);
 
-  if (loop_table[index].tag != tag)
-    return -1;
+ /* if (loop_table[index].tag != tag)
+    return -1;*/
 
-  if (loop_table[index].confidence == 3){
-    if (loop_table[index].iter_count == loop_table[index].loop_count)
+  if (loop_table[index].confidence == HIGHCONFIDENCE 
+      && loop_table[index].loop_count > 0
+      && loop_table[index].iter_count == loop_table[index].loop_count
+      && loop_table[index].miss_count < 1000
+      && loop_table[index].tag == tag)
      return NOTTAKEN;
-    else
-    return -1;
-  }
   else
     return -1;
 }
 
-void LoopPredictor::UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir){
+void LoopPredictor::UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir, bool usedlp){
   int tag = get_tag(PC);
   int index = get_index(PC);
+
+  //if (usedlp && predDir != resolveDir)
+    //printf("Index: %d, Tag: %d, Stored Tag: %d, Loop count: %d, Iter Count: %d, confidence: %d, Age:%d\n", index,
+    //tag, loop_table[index].tag,  loop_table[index].loop_count,  loop_table[index].iter_count,  loop_table[index].confidence, loop_table[index].age);
   if (loop_table[index].tag == tag){
-    if (resolveDir == TAKEN){
+    /*if (resolveDir == TAKEN){
       loop_table[index].iter_count++;
       if (loop_table[index].iter_count > loop_table[index].loop_count &&
           loop_table[index].confidence <= 1){
@@ -348,30 +353,63 @@ void LoopPredictor::UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir){
       }
     }
     else {
-      loop_table[index].iter_count = 0;
       if (loop_table[index].iter_count == loop_table[index].loop_count && predDir == resolveDir){
-       // printf("lp correct\n");
         incr_confidence(index);
         incr_age(index);
       }
-      else{
+      else {
         //printf("lp wrong\n");
         decr_confidence(index);
         decr_age(index);
       }
+      loop_table[index].iter_count = 0;
+    }*/
+    //correct
+    if (predDir == resolveDir){
+      //took branch
+     // loop_table[index].miss_count = 0;
+      if (resolveDir == TAKEN){
+        loop_table[index].iter_count++;
+        if (loop_table[index].iter_count > loop_table[index].loop_count && 
+            loop_table[index].confidence <= LOWCONFIDENCE)
+          loop_table[index].loop_count = loop_table[index].iter_count;
+      }
+      //did not take
+      else{
+        incr_confidence(index);
+        incr_age(index);
+        loop_table[index].iter_count = 0;
+      }
+    }
+    //incorrect
+    else{
+      loop_table[index].miss_count++;
+      if (resolveDir == TAKEN){
+        loop_table[index].iter_count++;
+      }
+      else{
+        if (loop_table[index].confidence <= LOWCONFIDENCE){
+          loop_table[index].loop_count = loop_table[index].iter_count;
+        }
+        loop_table[index].iter_count = 0;
+      }
+      decr_age(index);
+      decr_confidence(index);
     }
   }
   else{
-    if(loop_table[index].age == 0){
+    if(loop_table[index].age == 0 && resolveDir == TAKEN){
         loop_table[index].tag = tag;
         loop_table[index].age = INITAGE;
-        loop_table[index].iter_count = 0;
-        loop_table[index].loop_count = 0;
+        loop_table[index].iter_count = 1;
+        loop_table[index].loop_count = 1;
+        loop_table[index].confidence = 0;
+        loop_table[index].miss_count = 0;
     } 
-    decr_age(index);
+    else
+      decr_age(index);
   }
 }
-
 uint16_t LoopPredictor::get_index(UINT64 PC){
   return (PC & ((1 << LPINDEXBITS) - 1));
 }
@@ -386,12 +424,13 @@ void LoopPredictor::init_lp(){
     loop_table[i].loop_count = 0;
     loop_table[i].confidence = 0;
     loop_table[i].tag = 0;
-    loop_table[i].age = INITAGE;
+    loop_table[i].age = 0;
+    loop_table[i].miss_count = 0;
   }
 }
 
 void LoopPredictor::incr_confidence(uint16_t index){
-  if (loop_table[index].confidence < 3)
+  if (loop_table[index].confidence < HIGHCONFIDENCE)
     loop_table[index].confidence++;
 }
 void LoopPredictor::decr_confidence(uint16_t index){
