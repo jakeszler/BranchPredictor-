@@ -3,7 +3,13 @@
 
 PREDICTOR::PREDICTOR (void)
 {
-  
+
+  ghr = 0;
+
+  for(int i = 0; i< GA_SIZE; i++)
+  {
+    GA[i] = 0;
+  }
 }
 
 bool PREDICTOR::GetPrediction (UINT64 PC)
@@ -74,30 +80,20 @@ void PREDICTOR::increment_weights(uint8_t address, uint8_t index)
 {
   weights_array[address][GA[index]][index]++;
 }
-void PREDICTOR::decrement_weights(uint8_t Aaddress, uint8_t index)
+void PREDICTOR::decrement_weights(uint8_t address, uint8_t index)
 {
   weights_array[address][GA[index]][index]--;
 }
 
 void PREDICTOR::ga_update(uint8_t address)
 {
-	for(int ii = GA_SIZE; ii > 1; i--)
+	for(int i = GA_SIZE; i > 1; i--)
 	{
 		GA[i] = GA[i-1];
 	}   
 	GA[0] = address;
 }
 
-PREDICTOR::GHR(void){
-  ghr = 0;
-}
-
-PREDICTOR::GA(void){
-	for(int i = 0; i< GA_SIZE; i++)
-	{
-		GA[i] = 0;
-	}
-}
 
 void PREDICTOR::ghr_update(bool resolveDir){
   ghr <<= 1;

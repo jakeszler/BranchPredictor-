@@ -19,7 +19,7 @@
 #define GA_SIZE 100
 #define GHL 100
 #define HISTORY_LENGTH 8
-
+#define theta 128
 
 #define TAKEN 1
 #define NOTTAKEN 0
@@ -51,10 +51,13 @@ class PREDICTOR{
   void ghr_init();
   void ghr_update(bool resolveDir);
   void ga_update(uint8_t address);
+  void decrement_weights(uint8_t address, uint8_t index);
+  void increment_weights(uint8_t address, uint8_t index);
+  bool GetPrediction (UINT64 PC);
+  void UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool predDir, UINT64 branchTarget);
 
-
-  GHR(void);
-  GA(void);
+ // GHR(void);
+  //GA(void);
 
 
 
