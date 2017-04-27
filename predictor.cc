@@ -46,11 +46,6 @@ void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool
       lp.UpdatePredictor(PC, resolveDir, predDir, usedlp);
     }
 
-   /* if(usedlp && resolveDir != predDir)
-      printf("incorrect lp\n");
-    else if (usedlp)
-      printf("correct lp\n");*/
-
     if (numbranches % 512000 == 0){
         banks.clearLSBs();
     }
@@ -161,8 +156,8 @@ uint16_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
 
 
   __uint128_t mapped = masked_ghr + PC *  2971215073;
- // return mapped % (1 << TAGBITS);
-  int tag = mapped & ((1 << TAGBITS) - 1);
+  return mapped % (1 << TAGBITS);
+ /* int tag = mapped & ((1 << TAGBITS) - 1);
   mapped >>= TAGBITS;
   numHistoryBits -= TAGBITS;
 
@@ -178,7 +173,7 @@ uint16_t PREDICTOR::get_tag(UINT64 PC, __uint128_t ghr, int bankno){
         numHistoryBits -= numHistoryBits;
       }
   }
-  return tag % (1 << TAGBITS); 
+  return tag % (1 << TAGBITS); */
 }
 
 void PREDICTOR::init_update_banks(){
@@ -345,25 +340,6 @@ void LoopPredictor::UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir, bo
     //printf("Index: %d, Tag: %d, Stored Tag: %d, Loop count: %d, Iter Count: %d, confidence: %d, Age:%d\n", index,
     //tag, loop_table[index].tag,  loop_table[index].loop_count,  loop_table[index].iter_count,  loop_table[index].confidence, loop_table[index].age);
   if (loop_table[index].tag == tag){
-    /*if (resolveDir == TAKEN){
-      loop_table[index].iter_count++;
-      if (loop_table[index].iter_count > loop_table[index].loop_count &&
-          loop_table[index].confidence <= 1){
-        loop_table[index].loop_count++;
-      }
-    }
-    else {
-      if (loop_table[index].iter_count == loop_table[index].loop_count && predDir == resolveDir){
-        incr_confidence(index);
-        incr_age(index);
-      }
-      else {
-        //printf("lp wrong\n");
-        decr_confidence(index);
-        decr_age(index);
-      }
-      loop_table[index].iter_count = 0;
-    }*/
     //correct
     if (predDir == resolveDir){
       //took branch

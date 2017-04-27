@@ -21,7 +21,7 @@
 #define BANKSIZE 1024
 #define BANKINDEXBITS 10
 #define NUMBANKS 5
-#define TAGBITS 8
+#define TAGBITS 10
 
 #define MAXSAT 7
 #define UMAX 3
@@ -36,7 +36,7 @@
 #define LPINDEXBITS 10
 #define LPTAGBITS 16
 #define INITAGE 20
-#define HIGHCONFIDENCE 2
+#define HIGHCONFIDENCE 3
 #define LOWCONFIDENCE 1
 
 //NOTE competitors are allowed to change anything in this file include the following two defines
