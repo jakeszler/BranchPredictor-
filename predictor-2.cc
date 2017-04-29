@@ -19,11 +19,11 @@ bool PREDICTOR::GetPrediction (UINT64 PC)
   {
     if(ghr & (1<<i))
     {
-      output = output + weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i];
+      output = output + weights_array[PC & ((1 << ADDRESSBITS)-1)][GA[i]][i];
     }
     else
    	{
-       output = output - weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i];
+       output = output - weights_array[PC & ((1 << ADDRESSBITS)-1)][GA[i]][i];
    	}
   }
   if(output >= 0)
@@ -38,26 +38,26 @@ void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool
  {
    if(TAKEN)
    {
-   	  weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] + 1;
+   	  increment_weights(PC & ((1 << ADDRESSBITS)-1),0); //weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] + 1;
    }
    else
    {
-   	  weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] - 1;
+   	  decrement_weights(PC & ((1 << ADDRESSBITS)-1),0);//weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] - 1;
    }
    for(int i=0; i < GHL; i++)
    {
    	 if(ghr & (1<<i))
    	 {
-   	 	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] + 1;
+   	   increment_weights(PC & ((1 << ADDRESSBITS)-1),i); //	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] + 1;
    	 }
    	 else
    	 {
-   	 	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] - 1;
+   	   decrement_weights(PC & ((1 << ADDRESSBITS)-1),i);  //	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] - 1;
    	 }
    }
 
  }
-   ga_update((1 << HISTORY_LENGTH)-1);// move everything over by one
+   ga_update((1 << ADDRESSBITS)-1);// move everything over by one
    ghr_update(resolveDir);
 
 }
@@ -78,11 +78,11 @@ void PREDICTOR::init_weightarray (void)
 
 void PREDICTOR::increment_weights(uint8_t address, uint8_t index)
 {
-  weights_array[address][GA[index]][index]++;
+  weights_array[address][GA[index]][index+1]++;
 }
 void PREDICTOR::decrement_weights(uint8_t address, uint8_t index)
 {
-  weights_array[address][GA[index]][index]--;
+  weights_array[address][GA[index]][index+1]--;
 }
 
 void PREDICTOR::ga_update(uint8_t address)
