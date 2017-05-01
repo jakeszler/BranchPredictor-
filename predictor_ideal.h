@@ -16,11 +16,12 @@
 #include "utils.h"
 
 
-#define NUMPERCEPTRONS 4096
-#define INDEXBITS 12
-#define GHL 100
-#define NUMWEIGHTS 101
-#define THETA 128
+#define TABLESIZE 31
+#define GA_SIZE 30
+#define GHL 30
+#define ADDRESSBITS 8
+#define theta 128
+#define NUMADDRESSES 256
 
 #define TAKEN 1
 #define NOTTAKEN 0
@@ -42,17 +43,19 @@ class PREDICTOR{
   //UINT32  numPhtEntries; // entries in pht 
 
   //int bank_used[NUMBANKS + 2];
-  int8_t weights_array[NUMPERCEPTRONS][NUMWEIGHTS];
+  uint8_t GA[GA_SIZE];
+  uint8_t address;
+  int8_t weights_array[NUMADDRESSES][NUMADDRESSES][TABLESIZE];
   uint8_t index; 
   int64_t output;
-  int ghr[GHL];
+  __uint128_t ghr;
   int numbranches;
 
   void ghr_init();
   void ghr_update(bool resolveDir);
-  void decrement_weights(uint8_t perceptron_no, uint8_t index);
-  void increment_weights(uint8_t perceptron_no, uint8_t index);
-  int get_perceptron_no(UINT64 PC);
+  void ga_update(uint8_t address);
+  void decrement_weights(uint8_t address, uint8_t index);
+  void increment_weights(uint8_t address, uint8_t index);
   
  // GHR(void);
   //GA(void);

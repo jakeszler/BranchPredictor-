@@ -4,119 +4,97 @@
 PREDICTOR::PREDICTOR (void)
 {
   numbranches = 0;
-  ghr = 0;
-  for(int i = 0; i < GA_SIZE; i++)
-  {
-    GA[i] = 0;
+  for (int i = 0; i < GHL; i++){
+    ghr[i] = 0;
   }
-
+  init_weightarray();
 }
 
 bool PREDICTOR::GetPrediction (UINT64 PC)
 {
   numbranches++;
-  output = weights_array[PC & ((1 << ADDRESSBITS)-1)][0][0];
-  for(int i = 0; i < GHL; i++)
-  {
-    if((ghr >> i) & 1)
-    {
-      output += weights_array[PC & ((1 << ADDRESSBITS)-1)][GA[i]][i + 1];
+  int perc = get_perceptron_no(PC);
+  output = weights_array[perc][0];
+  for (int i = 0; i < GHL; i++){
+      output += ghr[i] * weights_array[perc][i + 1];
     }
-    else{
-       output -= weights_array[PC & ((1 << ADDRESSBITS)-1)][GA[i]][i + 1];
-   	}
-  }
- 
-  if(output >= 0)
-  	return true;
-  else 
-  	return false;
+  return (output >= 0);
 }
 
 void PREDICTOR::UpdatePredictor (UINT64 PC, OpType OPTYPE, bool resolveDir, bool predDir, UINT64 branchTarget)
 {
-if (predDir == resolveDir)
-  printf("%d\n", output);
+    
+  int perc = get_perceptron_no(PC);
 
- if(abs(output) < theta || (predDir != resolveDir))
- {  
-   if(resolveDir == TAKEN)
-   {
-   	  increment_weights(PC & ((1 << ADDRESSBITS)-1),0); //weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] + 1;
-   }
-   else
-   {
-   	  decrement_weights(PC & ((1 << ADDRESSBITS)-1),0);//weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][0][0] - 1;
-   }
-   for(int i=0; i < GHL; i++)
-   {
-   	 if((ghr >> i) & 1)
-   	 {
-   	   increment_weights(PC & ((1 << ADDRESSBITS)-1),i); //	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] + 1;
-   	 }
-   	 else
-   	 {
-   	   decrement_weights(PC & ((1 << ADDRESSBITS)-1),i);  //	weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] = weights_array[PC & ((1 << HISTORY_LENGTH)-1)][GA[i]][i] - 1;
-   	 }
-   }
+  if (predDir != resolveDir || abs(output) < THETA){
+    if (resolveDir == TAKEN){
+      if (weights_array[perc][0] < THETA)
+        weights_array[perc][0]++;
+    }
+    else{
+      if (weights_array[perc][0] > (-1 * THETA))
+        weights_array[perc][0]--;
+    }
 
- }
-   ga_update(PC & ((1 << ADDRESSBITS) - 1));// move everything over by one
-   ghr_update(resolveDir);
-
+    for (int i = 0; i < GHL; i++){
+        if (ghr[i] == 1){
+            if (resolveDir == TAKEN){
+                 if (weights_array[perc][i + 1] < THETA)
+                   weights_array[perc][i + 1]++;
+            }
+            else{
+                if (weights_array[perc][i + 1] > (-1 * THETA))
+                  weights_array[perc][i + 1]--;
+            }
+        }
+        else{
+            if (resolveDir == TAKEN){
+                if (weights_array[perc][i + 1] > (-1 * THETA))
+                  weights_array[perc][i + 1]--;
+            }
+            else{
+                 if (weights_array[perc][i + 1] < THETA)
+                  weights_array[perc][i + 1]++;
+              }
+        }
+    }
+  }
+  ghr_update(resolveDir);
 }
 
 void PREDICTOR::init_weightarray (void)
 {
- for(int i = 0; i < NUMADDRESSES; i++)
- {
-	for(int j = 0; j < NUMADDRESSES; j++)
- 	{
- 		for(int k = 0; k < TABLESIZE; k++)
- 		{
- 			weights_array[i][j][k] = 0;
- 		}
- 	}
- }
-}
-
-void PREDICTOR::increment_weights(uint8_t address, uint8_t index)
-{
-  if (index == 0){
-    if (weights_array[address][0][0] < 63)
-      weights_array[address][0][0]++;
-  }
-  else{
-    if (weights_array[address][GA[index]][index+1] < 63)
-      weights_array[address][GA[index]][index+1]++;
-  }
-}
-void PREDICTOR::decrement_weights(uint8_t address, uint8_t index)
-{
-  if (index == 0){
-    if (weights_array[address][0][0] > -64)
-    weights_array[address][0][0]--;
-  }
-  else{
-    if (weights_array[address][GA[index]][index+1] > -64)
-      weights_array[address][GA[index]][index+1]--;
+  for(int i = 0; i < NUMPERCEPTRONS; i++){
+	 for(int j = 0; j < NUMWEIGHTS; j++){
+ 			weights_array[i][j] = 0;
+ 	  }
   }
 }
 
-void PREDICTOR::ga_update(uint8_t addr_bits)
+void PREDICTOR::increment_weights(uint8_t perceptron_no, uint8_t index)
 {
-	for(int i = GA_SIZE; i >= 1; i--){
-		GA[i] = GA[i-1];
-	}   
-	GA[0] = addr_bits;
+  if (weights_array[perceptron_no][index] < THETA)
+    weights_array[perceptron_no][index]++;
+}
+
+void PREDICTOR::decrement_weights(uint8_t perceptron_no, uint8_t index)
+{
+  if (weights_array[perceptron_no][index] > (-1 * THETA))
+    weights_array[perceptron_no][index]--;
 }
 
 void PREDICTOR::ghr_update(bool resolveDir){
-  ghr <<= 1;
-  if (resolveDir == TAKEN)
-    ghr++;
+  for (int i = GHL - 1; i >= 1; i--){
+    ghr[i] = ghr[i - 1];
+  }
+  if (resolveDir)
+    ghr[0] = 1;
+  else
+    ghr[0] = -1;
+}
 
- // printf("%llu\n", ghr);
+int PREDICTOR::get_perceptron_no(UINT64 PC){
+  return (PC & ((1 << INDEXBITS) -1 ));
 }
 
 void PREDICTOR::TrackOtherInst(UINT64 PC, OpType OPTYPE, bool branchTaken, UINT64 branchTarget){}
