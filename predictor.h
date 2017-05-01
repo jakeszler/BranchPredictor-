@@ -18,9 +18,19 @@
 
 #define NUMPERCEPTRONS 4096
 #define INDEXBITS 12
-#define GHL 100
-#define NUMWEIGHTS 101
+#define GHL 40
+#define LHL 20
+#define NUMWEIGHTS 61
 #define THETA 128
+#define NUMHISTORIES 1024
+#define HISTORYBITS 10
+
+#define LPSIZE 1024
+#define LPINDEXBITS 10
+#define LPTAGBITS 16
+#define INITAGE 20
+#define HIGHCONFIDENCE 3
+#define LOWCONFIDENCE 1
 
 #define TAKEN 1
 #define NOTTAKEN 0
@@ -31,6 +41,34 @@
 
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
+typedef struct loop_entry{
+  uint16_t loop_count;
+  uint16_t iter_count;
+  uint16_t tag;
+  uint8_t confidence;
+  uint16_t age;
+  int miss_count;
+};
+
+class LoopPredictor{
+  private:
+    loop_entry loop_table[LPSIZE];
+
+  public:
+    LoopPredictor(void);
+
+    void init_lp();
+    int get_prediction(UINT64 PC);
+    uint16_t get_tag(UINT64 PC);
+    uint16_t get_index(UINT64 PC);
+    void incr_confidence(uint16_t index);
+    void decr_confidence(uint16_t index);
+    void incr_age(uint16_t index);
+    void decr_age(uint16_t index);
+    void UpdatePredictor(UINT64 PC, bool resolveDir, bool predDir, bool usedlp);
+
+};
+
 class PREDICTOR{
 
   // The state is defined for Gshare, change for your design
@@ -42,17 +80,23 @@ class PREDICTOR{
   //UINT32  numPhtEntries; // entries in pht 
 
   //int bank_used[NUMBANKS + 2];
-  int8_t weights_array[NUMPERCEPTRONS][NUMWEIGHTS];
+  int16_t weights_array[NUMPERCEPTRONS][GHL + LHL + 1];
   uint8_t index; 
   int64_t output;
   int ghr[GHL];
+  int local_histories[NUMHISTORIES][LHL];
   int numbranches;
+  bool usedlp;
+  LoopPredictor lp;
+
 
   void ghr_init();
   void ghr_update(bool resolveDir);
+  void lhr_update(bool resolveDir, int history_no);
   void decrement_weights(uint8_t perceptron_no, uint8_t index);
   void increment_weights(uint8_t perceptron_no, uint8_t index);
   int get_perceptron_no(UINT64 PC);
+  int get_history_no(UINT64 PC);
   
  // GHR(void);
   //GA(void);
